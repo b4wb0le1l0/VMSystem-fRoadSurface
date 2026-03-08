@@ -1,0 +1,53 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vibrodb}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vibro} -d ${POSTGRES_DB:-vibrodb}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend/main
+      dockerfile: Dockerfile
+    container_name: app
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: ${APP_PORT:-8000}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vibro}:${POSTGRES_PASSWORD:-vibro_pass}@postgres:5432/${POSTGRES_DB:-vibrodb}
+      ALEMBIC_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-vibro}:${POSTGRES_PASSWORD:-vibro_pass}@postgres:5432/${POSTGRES_DB:-vibrodb}
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    command: ["/app/entrypoint.sh"]
+
+  bot:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    container_name: tg_bot
+    environment:
+      BOT_TOKEN: ${BOT_TOKEN}
+      BACKEND_URL: ${BACKEND_URL:-http://backend:8000}
+      DEFAULT_PERIOD: ${DEFAULT_PERIOD:-30 days}
+      DEFAULT_RADIUS: ${DEFAULT_RADIUS:-1000}
+    depends_on:
+      backend:
+        condition: service_started
+    restart: unless-stopped
+
+volumes:
+  pg_data:

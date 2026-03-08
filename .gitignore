@@ -1,0 +1,59 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.build/
+dist/
+build/
+*.log
+
+# Venv
+.venv/
+venv/
+ENV/
+env/
+
+# Tools caches
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+Thumbs.db
+
+# Env and secrets
+.env
+*.env
+.env.*
+backend/.env
+ui/.env
+secrets.*
+*.pem
+*.key
+
+# Docker
+*.pid
+*.seed
+*.pid.lock
+docker-data/
+pg_data/
+postgres-data/
+volume-data/
+
+# Alembic
+alembic/*.log
+
+# Local data/output
+data/
+tmp/
+temp/
+outputs/
