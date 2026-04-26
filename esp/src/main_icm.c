@@ -13,7 +13,7 @@ const char* WIFI_SSID = "ESP_TEST";
 const char* WIFI_PASS = "55555444";
 
 // ===== Backend =====
-const char* SERVER_URL = "http://192.168.43.92:8000/ingest/windows";
+const char* SERVER_URL = "http://222.167.211.89:8000/ingest/windows";
 const char* DEVICE_SERIAL = "car_01_icm";
 
 // ===== GPS =====
