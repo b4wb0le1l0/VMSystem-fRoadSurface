@@ -10,13 +10,14 @@ BBox = Tuple[float, float, float, float]
 def color_for_score(score: Optional[float]) -> RGBA:
     if score is None or (isinstance(score, float) and np.isnan(score)):
         return (200, 200, 200, 0)
-    if score < 0.5:
-        return (0, 180, 0, 200)
-    if score < 0.8:
-        return (180, 180, 0, 210)
-    if score < 1.2:
-        return (240, 140, 0, 220)
-    return (220, 0, 0, 230)
+
+    if score < 0.08:
+        return (0, 180, 0, 200)       # green
+    if score < 0.20:
+        return (220, 210, 0, 210)     # yellow
+    if score < 0.45:
+        return (240, 140, 0, 220)     # orange
+    return (220, 0, 0, 230)           # red
 
 def _to_px_builder(bbox: BBox, img_w: int, img_h: int):
     min_lat, min_lon, max_lat, max_lon = bbox
@@ -102,8 +103,8 @@ def render_lines_png(
 
 def legend_items() -> List[dict]:
     return [
-        {"label": "A (good)", "max": 0.5, "color_rgba": [0, 180, 0, 160]},
-        {"label": "B",        "max": 0.8, "color_rgba": [180, 180, 0, 170]},
-        {"label": "C",        "max": 1.2, "color_rgba": [240, 140, 0, 190]},
-        {"label": "D (poor)", "max": None, "color_rgba": [220, 0, 0, 200]},
+        {"label": "A (smooth)", "max": 0.08, "color_rgba": [0, 180, 0, 160]},
+        {"label": "B (minor irregularities)", "max": 0.20, "color_rgba": [220, 210, 0, 170]},
+        {"label": "C (noticeable roughness)", "max": 0.45, "color_rgba": [240, 140, 0, 190]},
+        {"label": "D (severe bumps)", "max": None, "color_rgba": [220, 0, 0, 200]},
     ]

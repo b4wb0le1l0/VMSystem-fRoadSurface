@@ -14,17 +14,28 @@ from .rendering import render_points_png, render_lines_png, legend_items
 router = APIRouter()
 
 def compute_score_py(w: dict) -> float:
-    parts = []
-    if (v := w.get("a_rms")) is not None: parts.append(v)
-    if (v := w.get("a_p95")) is not None: parts.append(0.6 * v)
-    if (v := w.get("jerk_p95")) is not None: parts.append(0.3 * v)
-    if not parts:
-        return 0.0
-    val = float(np.nanmean(parts))
-    spd = w.get("speed_mps") or 0.0
-    if spd > 0:
-        val = val / max(0.5, min(1.5, (spd / 13.9)))
-    return float(val)
+    a_rms = float(w.get("a_rms") or 0.0)
+    a_p95 = float(w.get("a_p95") or 0.0)
+    a_max = float(w.get("a_max") or 0.0)
+    jerk_p95 = float(w.get("jerk_p95") or 0.0)
+    peaks = int(w.get("peaks") or 0)
+    speed_mps = float(w.get("speed_mps") or 0.0)
+
+    peak_factor = min(peaks, 12) * 0.02
+
+    score = (
+        0.45 * a_rms +
+        0.30 * a_p95 +
+        0.15 * a_max +
+        0.10 * jerk_p95 +
+        peak_factor
+    )
+
+    if speed_mps > 0.5:
+        speed_factor = max(0.85, min(1.15, speed_mps / 5.0))
+        score = score / speed_factor
+
+    return float(score)
 
 @router.get("/health")
 def health():
@@ -37,6 +48,7 @@ def health():
 def ingest_windows(payload: IngestWindows):
     if not payload.windows:
         raise HTTPException(status_code=400, detail="No windows provided")
+
     with get_conn() as conn, conn.cursor() as cur:
         cur.execute(
             "INSERT INTO devices(serial) VALUES (%s) ON CONFLICT (serial) DO NOTHING RETURNING id;",
@@ -50,15 +62,26 @@ def ingest_windows(payload: IngestWindows):
 
         trip_id = payload.trip_id
         if trip_id is None:
-            cur.execute("INSERT INTO trips(device_id, started_at) VALUES (%s, now()) RETURNING id;", (device_id,))
+            cur.execute(
+                "INSERT INTO trips(device_id, started_at) VALUES (%s, now()) RETURNING id;",
+                (device_id,)
+            )
             trip_id = cur.fetchone()[0]
 
         rows = []
         for w in payload.windows:
             wd = w.model_dump()
+
+            speed_mps = float(wd.get("speed_mps") or 0.0)
+
+            # пока фильтруем почти полную стоянку
+            if speed_mps < 0.3:
+                continue
+
             score = wd.get("roughness_score")
             if score is None:
                 score = compute_score_py(wd)
+
             rows.append((
                 device_id, trip_id,
                 wd["t_start"], wd["t_end"],
@@ -69,6 +92,10 @@ def ingest_windows(payload: IngestWindows):
                 wd.get("e_0_5"), wd.get("e_5_12"), wd.get("e_12_30"),
                 score, None
             ))
+
+        if not rows:
+            return IngestResult(inserted=0, trip_id=trip_id)
+
         cur.executemany("""
             INSERT INTO imu_windows(
                 device_id, trip_id, t_start, t_end, lat, lon,
@@ -81,6 +108,7 @@ def ingest_windows(payload: IngestWindows):
                     %s,%s,%s,%s,%s,%s,%s,%s,
                     %s,%s)
         """, rows)
+
     return IngestResult(inserted=len(rows), trip_id=trip_id)
 
 def _aggregate_and_render(

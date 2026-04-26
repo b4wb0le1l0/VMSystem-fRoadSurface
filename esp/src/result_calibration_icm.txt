@@ -1,0 +1,1 @@
+Mean ay [g]: -0.047205 Mean az [g]: 0.903979 Mean |a| [g]: 0.915233 Mean gx [dps]: -0.257328 Mean gy [dps]: -1.312046 Mean gz [dps]: -0.128443 Suggested offsets: ACC_OFFSET_X = -0.134725 ACC_OFFSET_Y = -0.047205 ACC_OFFSET_Z = -0.096021 GYRO_OFFSET_X = -0.257328 GYRO_OFFSET_Y = -1.312046 GYRO_OFFSET_Z = -0.128443 Suggested ACC_SCALE = 1.092618 ==============================
