@@ -1,0 +1,56 @@
+- name: Bootstrap Vibro VPS
+  hosts: vibro
+  become: true
+
+  tasks:
+    - name: Install base packages
+      apt:
+        name:
+          - ca-certificates
+          - curl
+          - git
+          - gnupg
+          - python3
+          - python3-pip
+          - rsync
+        state: present
+        update_cache: true
+
+    - name: Create apt keyrings dir
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download Docker GPG key
+      shell: |
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+        chmod a+r /etc/apt/keyrings/docker.asc
+      args:
+        creates: /etc/apt/keyrings/docker.asc
+
+    - name: Add Docker repository
+      shell: |
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu \
+          $(. /etc/os-release && echo $VERSION_CODENAME) stable" \
+          > /etc/apt/sources.list.d/docker.list
+      args:
+        creates: /etc/apt/sources.list.d/docker.list
+
+    - name: Install Docker
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-buildx-plugin
+          - docker-compose-plugin
+        state: present
+        update_cache: true
+
+    - name: Ensure Docker is running
+      service:
+        name: docker
+        state: started
+        enabled: true
