@@ -1,0 +1,82 @@
+- name: Deploy Vibro backend
+  hosts: vibro
+  become: true
+
+  vars:
+    local_project_dir: "{{ lookup('env', 'HOME') }}/VMSystem-fRoadSurface"
+    local_archive_path: "/tmp/vibro_project.tar.gz"
+    remote_archive_path: "/tmp/vibro_project.tar.gz"
+
+  tasks:
+    - name: Remove local temp archive if exists
+      delegate_to: localhost
+      become: false
+      file:
+        path: "{{ local_archive_path }}"
+        state: absent
+
+    - name: Create local tar.gz archive
+      delegate_to: localhost
+      become: false
+      shell: |
+        cd "{{ local_project_dir }}"
+        tar --exclude='.git' \
+            --exclude='.venv' \
+            --exclude='venv' \
+            --exclude='ansible' \
+            --exclude='__pycache__' \
+            --exclude='.pytest_cache' \
+            -czf "{{ local_archive_path }}" .
+      changed_when: true
+
+    - name: Create project dir on remote
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Upload project archive to remote
+      copy:
+        src: "{{ local_archive_path }}"
+        dest: "{{ remote_archive_path }}"
+        mode: "0644"
+
+    - name: Unpack project archive on remote
+      unarchive:
+        src: "{{ remote_archive_path }}"
+        dest: "{{ project_dir }}"
+        remote_src: true
+
+    - name: Create env file
+      copy:
+        dest: "{{ project_dir }}/.env"
+        mode: "0600"
+        content: |
+          POSTGRES_DB={{ postgres_db }}
+          POSTGRES_USER={{ postgres_user }}
+          POSTGRES_PASSWORD={{ postgres_password }}
+          POSTGRES_PORT=5432
+          APP_PORT={{ app_port }}
+          BACKEND_URL={{ backend_url }}
+          BOT_TOKEN={{ bot_token }}
+
+    - name: Normalize shell scripts line endings
+      shell: |
+        find {{ project_dir }} -type f -name "*.sh" -exec sed -i 's/\r$//' {} \;
+      changed_when: false
+
+    - name: Start backend
+      shell: docker compose up -d --build backend
+      args:
+        chdir: "{{ project_dir }}"
+
+    - name: Show backend status
+      shell: docker compose ps backend
+      args:
+        chdir: "{{ project_dir }}"
+      register: backend_ps
+      changed_when: false
+
+    - name: Print backend status
+      debug:
+        var: backend_ps.stdout_lines

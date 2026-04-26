@@ -1,0 +1,14 @@
+project_dir: /opt/vibro
+
+repo_url: "https://github.com/b4wb0le1l0/VMSystem-fRoadSurface.git"
+repo_branch: "main"
+
+postgres_db: "{{ lookup('env', 'POSTGRES_DB') }}"
+postgres_user: "{{ lookup('env', 'POSTGRES_USER') }}"
+postgres_password: "{{ lookup('env', 'POSTGRES_PASSWORD') }}"
+
+app_port: "{{ lookup('env', 'APP_PORT') }}"
+backend_url: "{{ lookup('env', 'BACKEND_URL') }}"
+
+bot_token: "{{ lookup('env', 'BOT_TOKEN') }}"
+

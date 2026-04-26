@@ -1,0 +1,29 @@
+- name: Wipe Vibro deployment from VPS
+  hosts: vibro
+  become: true
+
+  tasks:
+    - name: Check if project dir exists
+      stat:
+        path: "{{ project_dir }}"
+      register: project_dir_stat
+
+    - name: Stop docker compose stack
+      shell: docker compose down -v --remove-orphans
+      args:
+        chdir: "{{ project_dir }}"
+      when: project_dir_stat.stat.exists
+      ignore_errors: true
+
+    - name: Remove project directory
+      file:
+        path: "{{ project_dir }}"
+        state: absent
+
+    - name: Prune dangling docker images
+      shell: docker image prune -f
+      ignore_errors: true
+
+    - name: Prune unused docker volumes
+      shell: docker volume prune -f
+      ignore_errors: true
