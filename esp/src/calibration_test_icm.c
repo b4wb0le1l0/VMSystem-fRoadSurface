@@ -4,7 +4,6 @@
 
 ICM_20948_I2C icm;
 
-// Твои коэффициенты калибровки
 const float ACC_OFFSET_X = -0.134725f;
 const float ACC_OFFSET_Y = -0.047205f;
 const float ACC_OFFSET_Z = -0.096021f;

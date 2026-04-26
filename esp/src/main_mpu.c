@@ -21,11 +21,10 @@ const char* DEVICE_SERIAL = "car_01";
 // ===================== GPS =====================
 TinyGPSPlus gps;
 HardwareSerial GPSserial(2);
-static const int GPS_RX = 16;   // ESP32 RX2 <- TX GPS
-static const int GPS_TX = 17;   // можно не подключать физически
+static const int GPS_RX = 16; 
+static const int GPS_TX = 17; 
 
 // ===================== IMU =====================
-// Для твоего модуля WHO_AM_I=0x70 используем стартовые коэффициенты
 const float ACC_LSB_PER_G = 16384.0f;
 const float GYRO_LSB_PER_DPS = 131.0f;
 const float G_TO_MS2 = 9.80665f;

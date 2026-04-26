@@ -10,7 +10,6 @@ if [ -d "$VENV_PATH" ]; then
   source "$VENV_PATH/bin/activate"
 fi
 
-# Загружаем переменные из .env в окружение shell
 if [ -f "$ENV_FILE" ]; then
   set -a
   source "$ENV_FILE"

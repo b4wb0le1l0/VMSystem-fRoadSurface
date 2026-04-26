@@ -2,7 +2,6 @@
 set -e
 
 echo "Wait for Postgres at ${DATABASE_URL} ..."
-# простой пинг БД python'ом
 python - <<'PYCODE'
 import os, time, sys
 import psycopg
