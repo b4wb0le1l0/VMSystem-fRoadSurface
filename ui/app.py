@@ -26,7 +26,6 @@ if not BOT_TOKEN:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# user_id -> {"period": str, "radius": int, "last_loc": (lat, lon), "await_city": bool}
 USER_PREFS: Dict[int, Dict] = {}
 
 def get_user_prefs(uid: int) -> Dict:

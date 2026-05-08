@@ -5,17 +5,12 @@ import os
 from sqlalchemy import engine_from_config, pool
 from alembic import context
 
-# this is the Alembic Config object, which provides
-# access to the values within the .ini file in use.
 config = context.config
 
-# Interpret the config file for Python logging.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Get DB URL (dialect for SQLAlchemy)
 alembic_url = None
-# при запуске передаем через -x alembic_database_url=...
 for x in context.get_x_argument(as_dictionary=True).items():
     if x[0] == "alembic_database_url":
         alembic_url = x[1]
@@ -25,7 +20,6 @@ if not alembic_url:
     alembic_url = os.environ.get("ALEMBIC_DATABASE_URL")
 
 if not alembic_url:
-    # fallback: попробовать из DATABASE_URL заменить диалект
     db_url = os.environ.get("DATABASE_URL", "")
     if db_url.startswith("postgresql://"):
         alembic_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
@@ -35,7 +29,7 @@ if not alembic_url:
 
 config.set_main_option("sqlalchemy.url", alembic_url)
 
-target_metadata = None  # используем «сырые» SQL в миграциях
+target_metadata = None
 
 def run_migrations_offline():
     url = config.get_main_option("sqlalchemy.url")
