@@ -3,7 +3,7 @@
   become: true
 
   vars:
-    local_project_dir: "{{ lookup('env', 'HOME') }}/VMSystem-fRoadSurface"
+    local_project_dir: "{{ playbook_dir }}/../.."
     local_archive_path: "/tmp/vibro_project.tar.gz"
     remote_archive_path: "/tmp/vibro_project.tar.gz"
 
@@ -61,6 +61,8 @@
           POSTGRES_USER={{ postgres_user }}
           POSTGRES_PASSWORD={{ postgres_password }}
           POSTGRES_PORT=5432
+          POSTGRES_HOST=postgres
+          DATABASE_URL=postgresql://{{ postgres_user }}:{{ postgres_password }}@postgres:5432/{{ postgres_db }}
           APP_PORT={{ app_port }}
           BACKEND_URL={{ backend_url }}
           BOT_TOKEN={{ bot_token }}
@@ -69,6 +71,16 @@
       shell: |
         find {{ project_dir }} -type f -name "*.sh" -exec sed -i 's/\r$//' {} \;
       changed_when: false
+
+    - name: Verify docker-compose.yml exists
+      stat:
+        path: "{{ project_dir }}/docker-compose.yml"
+      register: compose_file_stat
+
+    - name: Fail if docker-compose.yml is missing
+      fail:
+        msg: "docker-compose.yml not found in {{ project_dir }}. Archive extraction may have failed."
+      when: not compose_file_stat.stat.exists
 
     - name: Start postgres
       shell: docker compose up -d --build postgres

@@ -3,7 +3,7 @@
   become: true
 
   vars:
-    local_project_dir: "{{ lookup('env', 'HOME') }}/VMSystem-fRoadSurface"
+    local_project_dir: "{{ playbook_dir }}/../.."
     local_archive_path: "/tmp/vibro_project.tar.gz"
     remote_archive_path: "/tmp/vibro_project.tar.gz"
 

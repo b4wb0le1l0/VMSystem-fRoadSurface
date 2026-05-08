@@ -8,11 +8,17 @@
         path: "{{ project_dir }}"
       register: project_dir_stat
 
+    - name: Check if docker-compose.yml exists
+      stat:
+        path: "{{ project_dir }}/docker-compose.yml"
+      register: compose_file_stat
+      when: project_dir_stat.stat.exists
+
     - name: Stop docker compose stack
       shell: docker compose down -v --remove-orphans
       args:
         chdir: "{{ project_dir }}"
-      when: project_dir_stat.stat.exists
+      when: project_dir_stat.stat.exists and compose_file_stat.stat.exists
       ignore_errors: true
 
     - name: Remove project directory
