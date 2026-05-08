@@ -82,7 +82,24 @@
         msg: "docker-compose.yml not found in {{ project_dir }}. Archive extraction may have failed."
       when: not compose_file_stat.stat.exists
 
-    - name: Start postgres
+    - name: Start postgres (first time to create volume)
+      shell: docker compose up -d postgres
+      args:
+        chdir: "{{ project_dir }}"
+      ignore_errors: true
+
+    - name: Wait for postgres to be ready
+      shell: sleep 10
+      args:
+        chdir: "{{ project_dir }}"
+
+    - name: Create database if not exists
+      shell: "docker exec postgres psql -v ON_ERROR_STOP=1 -U {{ postgres_user }} -d postgres -c \"SELECT 'CREATE DATABASE {{ postgres_db }}' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{{ postgres_db }}');\""
+      args:
+        chdir: "{{ project_dir }}"
+      ignore_errors: true
+
+    - name: Rebuild and restart postgres with init script
       shell: docker compose up -d --build postgres
       args:
         chdir: "{{ project_dir }}"
