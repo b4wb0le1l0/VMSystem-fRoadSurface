@@ -56,6 +56,8 @@
           POSTGRES_USER={{ postgres_user }}
           POSTGRES_PASSWORD={{ postgres_password }}
           POSTGRES_PORT=5432
+          POSTGRES_HOST=postgres
+          DATABASE_URL=postgresql://{{ postgres_user }}:{{ postgres_password }}@postgres:5432/{{ postgres_db }}
           APP_PORT={{ app_port }}
           BACKEND_URL={{ backend_url }}
           BOT_TOKEN={{ bot_token }}

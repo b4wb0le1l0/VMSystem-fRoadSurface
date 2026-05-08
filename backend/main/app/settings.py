@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     database_url: str  # postgresql://user:pass@host:port/db
 
     class Config:
-        env_file = None
+        env_file = ".env"
         env_prefix = ""
         case_sensitive = False
 
