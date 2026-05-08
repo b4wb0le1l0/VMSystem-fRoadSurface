@@ -8,6 +8,9 @@
 #define IMU_ADDR 0x68
 #define REG_WHO_AM_I     0x75
 #define REG_PWR_MGMT_1   0x6B
+#define REG_ACCEL_CONFIG 0x1C
+#define REG_GYRO_CONFIG  0x1B
+#define REG_CONFIG       0x1A
 #define REG_ACCEL_XOUT_H 0x3B
 
 // ===================== Wi-Fi =====================
@@ -15,7 +18,7 @@ const char* WIFI_SSID = "ESP_TEST";
 const char* WIFI_PASS = "55555444";
 
 // ===================== Backend =====================
-const char* SERVER_URL = "http://192.168.0.105:8000/ingest/windows";
+const char* SERVER_URL = "http://222.167.211.89:8000/ingest/windows";
 const char* DEVICE_SERIAL = "car_01";
 
 // ===================== GPS =====================
@@ -25,10 +28,19 @@ static const int GPS_RX = 16;   // ESP32 RX2 <- TX GPS
 static const int GPS_TX = 17;   // можно не подключать физически
 
 // ===================== IMU =====================
-// Для твоего модуля WHO_AM_I=0x70 используем стартовые коэффициенты
-const float ACC_LSB_PER_G = 16384.0f;
-const float GYRO_LSB_PER_DPS = 131.0f;
+const float ACC_LSB_PER_G = 16384.0f;     // ±2g
+const float GYRO_LSB_PER_DPS = 131.0f;    // ±250 dps
 const float G_TO_MS2 = 9.80665f;
+
+const float ACC_OFFSET_X = 0.100338f;
+const float ACC_OFFSET_Y = -0.020033f;
+const float ACC_OFFSET_Z = -0.053435f;
+
+const float GYRO_OFFSET_X = 0.171639f;
+const float GYRO_OFFSET_Y = -0.561817f;
+const float GYRO_OFFSET_Z = -0.711623f;
+
+const float ACC_SCALE_FACTOR = 1.000000f;
 
 // ===================== Timing =====================
 const unsigned long SAMPLE_INTERVAL_MS = 50;   // 20 Гц
@@ -265,16 +277,13 @@ bool sendWindow(
   String body;
   serializeJson(doc, body);
 
-  Serial.println("POST /ingest/windows");
-  Serial.println(body);
-
   int code = http.POST(body);
   String resp = http.getString();
   http.end();
 
-  Serial.print("HTTP code: ");
-  Serial.println(code);
-  Serial.print("Response: ");
+  Serial.print("POST code=");
+  Serial.print(code);
+  Serial.print(" response=");
   Serial.println(resp);
 
   if (code >= 200 && code < 300) {
@@ -313,6 +322,15 @@ void setup() {
   writeRegister(REG_PWR_MGMT_1, 0x00);
   delay(100);
 
+  writeRegister(REG_GYRO_CONFIG, 0x00);   // ±250 dps
+  delay(10);
+
+  writeRegister(REG_ACCEL_CONFIG, 0x00);  // ±2g
+  delay(10);
+
+  writeRegister(REG_CONFIG, 0x03);        // DLPF
+  delay(10);
+
   GPSserial.begin(9600, SERIAL_8N1, GPS_RX, GPS_TX);
 
   connectWiFi();
@@ -332,12 +350,34 @@ void loop() {
     gps.encode(GPSserial.read());
   }
 
-  gpsValid = gps.location.isValid();
-  curLat = gpsValid ? gps.location.lat() : 0.0;
-  curLng = gpsValid ? gps.location.lng() : 0.0;
-  curSats = gps.satellites.isValid() ? gps.satellites.value() : 0;
-  curSpeedKmph = gps.speed.isValid() ? gps.speed.kmph() : 0.0;
-  curHdop = gps.hdop.isValid() ? gps.hdop.hdop() : 99.9;
+  bool gpsPosValid   = gps.location.isValid();
+  bool gpsTimeValid  = gps.date.isValid() && gps.time.isValid();
+  bool gpsSpeedValid = gps.speed.isValid();
+  bool gpsHdopValid  = gps.hdop.isValid();
+  bool gpsSatsValid  = gps.satellites.isValid();
+
+  curLat = gpsPosValid ? gps.location.lat() : 0.0;
+  curLng = gpsPosValid ? gps.location.lng() : 0.0;
+  curSats = gpsSatsValid ? gps.satellites.value() : 0;
+  curHdop = gpsHdopValid ? gps.hdop.hdop() : 99.9;
+
+  gpsValid = gpsPosValid &&
+             gpsTimeValid &&
+             gpsHdopValid &&
+             gpsSatsValid &&
+             curSats >= 4 &&
+             curHdop <= 3.0;
+
+  if (gpsValid && gpsSpeedValid) {
+    curSpeedKmph = gps.speed.kmph();
+
+    // защита от совсем мусорной скорости при плохом фиксе
+    if (curSpeedKmph < 0.0 || curSpeedKmph > 250.0) {
+      curSpeedKmph = 0.0;
+    }
+  } else {
+    curSpeedKmph = 0.0;
+  }
 
   captureWindowStartTimeIfNeeded();
 
@@ -360,13 +400,27 @@ void loop() {
       float ay_g = ay_raw / ACC_LSB_PER_G;
       float az_g = az_raw / ACC_LSB_PER_G;
 
+      float gx_raw_dps = gx_raw / GYRO_LSB_PER_DPS;
+      float gy_raw_dps = gy_raw / GYRO_LSB_PER_DPS;
+      float gz_raw_dps = gz_raw / GYRO_LSB_PER_DPS;
+
+      // Калибровка accel
+      ax_g -= ACC_OFFSET_X;
+      ay_g -= ACC_OFFSET_Y;
+      az_g -= ACC_OFFSET_Z;
+
+      ax_g *= ACC_SCALE_FACTOR;
+      ay_g *= ACC_SCALE_FACTOR;
+      az_g *= ACC_SCALE_FACTOR;
+
+      // Калибровка gyro
+      gx_dps = gx_raw_dps - GYRO_OFFSET_X;
+      gy_dps = gy_raw_dps - GYRO_OFFSET_Y;
+      gz_dps = gz_raw_dps - GYRO_OFFSET_Z;
+
       ax_ms2 = ax_g * G_TO_MS2;
       ay_ms2 = ay_g * G_TO_MS2;
       az_ms2 = az_g * G_TO_MS2;
-
-      gx_dps = gx_raw / GYRO_LSB_PER_DPS;
-      gy_dps = gy_raw / GYRO_LSB_PER_DPS;
-      gz_dps = gz_raw / GYRO_LSB_PER_DPS;
 
       accMag = sqrt(ax_ms2 * ax_ms2 + ay_ms2 * ay_ms2 + az_ms2 * az_ms2);
       accDyn = accMag - G_TO_MS2;
@@ -438,7 +492,7 @@ void loop() {
       );
 
       if (ok) {
-        Serial.println("Window sent successfully");
+        Serial.println("Window sent");
       } else {
         Serial.println("Window send failed");
       }
