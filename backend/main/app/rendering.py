@@ -10,11 +10,12 @@ BBox = Tuple[float, float, float, float]
 def color_for_score(score: Optional[float]) -> RGBA:
     if score is None or (isinstance(score, float) and np.isnan(score)):
         return (200, 200, 200, 0)
-    if score < 0.35:
+
+    if score < 0.80:
         return (0, 180, 0, 200)      # green
-    if score < 0.90:
+    if score < 1.30:
         return (210, 190, 0, 210)    # yellow
-    if score < 1.80:
+    if score < 2.10:
         return (240, 140, 0, 220)    # orange
     return (220, 0, 0, 230)          # red
 
@@ -119,8 +120,8 @@ def render_lines_png(
 
 def legend_items() -> List[dict]:
     return [
-        {"label": "Green (good)", "max": 0.35, "color_rgba": [0, 180, 0, 160]},
-        {"label": "Yellow",       "max": 0.90, "color_rgba": [210, 190, 0, 170]},
-        {"label": "Orange",       "max": 1.80, "color_rgba": [240, 140, 0, 190]},
+        {"label": "Green (good)", "max": 0.80, "color_rgba": [0, 180, 0, 160]},
+        {"label": "Yellow",       "max": 1.30, "color_rgba": [210, 190, 0, 170]},
+        {"label": "Orange",       "max": 2.10, "color_rgba": [240, 140, 0, 190]},
         {"label": "Red (bad)",    "max": None, "color_rgba": [220, 0, 0, 200]},
     ]
