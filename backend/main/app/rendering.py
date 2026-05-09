@@ -34,9 +34,10 @@ def render_points_png(
     bbox: BBox,
     img_w: int,
     img_h: int,
-    use_metric: str = "p95",
+    use_metric: Literal["avg", "p95"] = "p95",
     cell_size_m: int = 25,
     roads: Optional[List[List[Tuple[float, float]]]] = None,
+    buildings: Optional[List[List[Tuple[float, float]]]] = None,
     opaque_bg: bool = False
 ) -> bytes:
     min_lat, min_lon, max_lat, max_lon = bbox
@@ -47,6 +48,19 @@ def render_points_png(
 
     lon_m = 111_320.0 * math.cos(math.radians((min_lat + max_lat) / 2.0))
     r = max(2, int(0.5 * cell_size_m * img_w / max(1, (max_lon - min_lon) * lon_m)))
+
+    if buildings:
+        for poly in buildings:
+            if len(poly) >= 3:
+                pts = [to_px(lat, lon) for lat, lon in poly]
+                try:
+                    draw.polygon(
+                        pts,
+                        fill=(230, 230, 230, 180),
+                        outline=(200, 200, 200, 160)
+                    )
+                except Exception:
+                    pass
 
     if roads:
         w = max(1, min(3, int(0.2 * cell_size_m * img_w / max(1, (max_lon - min_lon) * lon_m))))
@@ -71,6 +85,7 @@ def render_lines_png(
     img_h: int,
     line_w_m: float = 8.0,
     roads: Optional[List[List[Tuple[float, float]]]] = None,
+    buildings: Optional[List[List[Tuple[float, float]]]] = None,
     opaque_bg: bool = False
 ) -> bytes:
     min_lat, min_lon, max_lat, max_lon = bbox
@@ -82,6 +97,19 @@ def render_lines_png(
     lon_m = 111_320.0 * math.cos(math.radians((min_lat + max_lat) / 2.0))
     px_per_m = (img_w - 1) / max(1e-9, (max_lon - min_lon) * lon_m)
     w_px = max(2, int(line_w_m * px_per_m))
+
+    if buildings:
+        for poly in buildings:
+            if len(poly) >= 3:
+                pts = [to_px(lat, lon) for lat, lon in poly]
+                try:
+                    draw.polygon(
+                        pts,
+                        fill=(230, 230, 230, 180),
+                        outline=(200, 200, 200, 160)
+                    )
+                except Exception:
+                    pass
 
     if roads:
         rw = max(1, min(3, int(w_px * 0.5)))

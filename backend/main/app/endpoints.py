@@ -166,6 +166,7 @@ def _aggregate_and_render(
         cur.execute(sql, (min_lon, min_lat, max_lon, max_lat, dlat, dlon, period, min_lon, min_lat))
         rows = [(cx, cy, s_avg, s_p95, n) for cx, cy, n, s_avg, s_p95 in cur.fetchall()]
     roads = _fetch_osm_roads(min_lat, min_lon, max_lat, max_lon) if overlay_roads else None
+    buildings = _fetch_osm_buildings(min_lat, min_lon, max_lat, max_lon) if overlay_roads else None
     return render_points_png(
         rows=rows,
         bbox=(min_lat, min_lon, max_lat, max_lon),
@@ -173,6 +174,7 @@ def _aggregate_and_render(
         use_metric=metric,
         cell_size_m=cell_size_m,
         roads=roads,
+        buildings=buildings,
         opaque_bg=opaque_bg
     )
 
@@ -245,6 +247,44 @@ out geom;
             if len(poly) >= 2:
                 roads.append(poly)
     return roads
+
+@lru_cache(maxsize=64)
+def _fetch_osm_buildings_cached(min_lat: float, min_lon: float, max_lat: float, max_lon: float) -> List[List[Tuple[float, float]]]:
+    bbox = f"{min_lat},{min_lon},{max_lat},{max_lon}"
+    q = f"""
+[out:json][timeout:25];
+(
+  way["building"]({bbox});
+);
+out geom;
+"""
+    r = requests.post(
+        "https://overpass-api.de/api/interpreter",
+        data=q,
+        headers={"User-Agent": "VibroRoad/1.0"},
+        timeout=30
+    )
+    r.raise_for_status()
+    data = r.json()
+
+    buildings = []
+    for el in data.get("elements", []):
+        if el.get("type") == "way" and "geometry" in el:
+            poly = [(pt["lat"], pt["lon"]) for pt in el["geometry"]]
+            if len(poly) >= 3:
+                buildings.append(poly)
+    return buildings
+
+def _fetch_osm_buildings(min_lat: float, min_lon: float, max_lat: float, max_lon: float) -> Optional[List[List[Tuple[float, float]]]]:
+    try:
+        return _fetch_osm_buildings_cached(
+            round(min_lat, 4),
+            round(min_lon, 4),
+            round(max_lat, 4),
+            round(max_lon, 4)
+        )
+    except Exception:
+        return None
 
 def _fetch_osm_roads(min_lat: float, min_lon: float, max_lat: float, max_lon: float) -> Optional[List[List[Tuple[float, float]]]]:
     try:
@@ -336,7 +376,8 @@ def heatmap_lines(
     min_lat, min_lon, max_lat, max_lon = bbox_from_center(lat, lon, radius_m)
     lines = _collect_trip_lines(min_lat, min_lon, max_lat, max_lon, period, max_gap_s, max_seg_m)
     roads = _fetch_osm_roads(min_lat, min_lon, max_lat, max_lon) if overlay_roads else None
-    png = render_lines_png(lines, (min_lat, min_lon, max_lat, max_lon), img_w, img_h, line_w_m, roads, opaque)
+    buildings = _fetch_osm_buildings(min_lat, min_lon, max_lat, max_lon) if overlay_roads else None
+    png = render_lines_png(lines,(min_lat, min_lon, max_lat, max_lon), img_w,img_h, line_w_m, roads, buildings, opaque)
     return Response(content=png, media_type="image/png")
 
 @router.get("/heatmap_global_lines")
@@ -370,7 +411,8 @@ def heatmap_global_lines(
     min_lat, max_lat = max(-90.0,  miny - pad_y), min(90.0,  maxy + pad_y)
     lines = _collect_trip_lines(min_lat, min_lon, max_lat, max_lon, period, max_gap_s, max_seg_m)
     roads = _fetch_osm_roads(min_lat, min_lon, max_lat, max_lon) if overlay_roads else None
-    png = render_lines_png(lines, (min_lat, min_lon, max_lat, max_lon), img_w, img_h, line_w_m, roads, opaque)
+    buildings = _fetch_osm_buildings(min_lat, min_lon, max_lat, max_lon) if overlay_roads else None
+    png = render_lines_png(lines,(min_lat, min_lon, max_lat, max_lon), img_w,img_h, line_w_m, roads, buildings, opaque)
     return Response(content=png, media_type="image/png")
 
 @router.get("/legend")
