@@ -32,13 +32,13 @@ const float ACC_LSB_PER_G = 16384.0f;     // ±2g
 const float GYRO_LSB_PER_DPS = 131.0f;    // ±250 dps
 const float G_TO_MS2 = 9.80665f;
 
-const float ACC_OFFSET_X = 0.100338f;
-const float ACC_OFFSET_Y = -0.020033f;
-const float ACC_OFFSET_Z = -0.053435f;
+const float ACC_OFFSET_X = 0.089964f;
+const float ACC_OFFSET_Y = -0.110493f;
+const float ACC_OFFSET_Z = -0.059372f;
 
-const float GYRO_OFFSET_X = 0.171639f;
-const float GYRO_OFFSET_Y = -0.561817f;
-const float GYRO_OFFSET_Z = -0.711623f;
+const float GYRO_OFFSET_X = 0.254346f;
+const float GYRO_OFFSET_Y = -0.573430f;
+const float GYRO_OFFSET_Z = -0.964153f;
 
 const float ACC_SCALE_FACTOR = 1.000000f;
 

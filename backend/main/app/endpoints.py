@@ -11,9 +11,27 @@ from .schemas import IngestWindows, IngestResult
 from .utils import bbox_from_center, cell_deg_size
 from .rendering import render_points_png, render_lines_png, legend_items
 
+ENGINE_BASELINE = {
+    "a_rms":   0.592,
+    "a_p95":   1.148,
+    "jerk_p95": 35.742
+}
+
+MIN_THRESHOLDS = {
+    "a_rms":   1.184,
+    "a_p95":   2.295,
+    "a_max":   2.588,
+    "jerk_p95": 71.484
+}
+
 router = APIRouter()
 
 def compute_score_py(w: dict) -> float:
+    """
+    Вычисляет показатель неровности дороги.
+    Учитывает базовые шумы двигателя (вычитает ENGINE_BASELINE).
+    Если значения ниже MIN_THRESHOLDS — возвращает 0 (шум двигателя).
+    """
     a_rms = float(w.get("a_rms") or 0.0)
     a_p95 = float(w.get("a_p95") or 0.0)
     a_max = float(w.get("a_max") or 0.0)
@@ -21,13 +39,23 @@ def compute_score_py(w: dict) -> float:
     peaks = int(w.get("peaks") or 0)
     speed_mps = float(w.get("speed_mps") or 0.0)
 
+    a_rms_adj = max(0.0, a_rms - ENGINE_BASELINE["a_rms"])
+    a_p95_adj = max(0.0, a_p95 - ENGINE_BASELINE["a_p95"])
+    jerk_p95_adj = max(0.0, jerk_p95 - ENGINE_BASELINE["jerk_p95"])
+    a_max_adj = max(0.0, a_max - MIN_THRESHOLDS["a_max"])
+
+    if (a_rms_adj < MIN_THRESHOLDS["a_rms"] and
+        a_p95_adj < MIN_THRESHOLDS["a_p95"] and
+        jerk_p95_adj < MIN_THRESHOLDS["jerk_p95"]):
+        return 0.0
+
     peak_factor = min(peaks, 12) * 0.02
 
     score = (
-        0.45 * a_rms +
-        0.30 * a_p95 +
-        0.15 * a_max +
-        0.10 * jerk_p95 +
+        0.45 * a_rms_adj +
+        0.30 * a_p95_adj +
+        0.15 * a_max_adj +
+        0.10 * jerk_p95_adj +
         peak_factor
     )
 
@@ -61,6 +89,11 @@ def ingest_windows(payload: IngestWindows):
         device_id = row[0]
 
         trip_id = payload.trip_id
+        if trip_id is not None:
+            cur.execute("SELECT id FROM trips WHERE id = %s AND device_id = %s;", (trip_id, device_id))
+            if cur.fetchone() is None:
+                trip_id = None
+        
         if trip_id is None:
             cur.execute(
                 "INSERT INTO trips(device_id, started_at) VALUES (%s, now()) RETURNING id;",
