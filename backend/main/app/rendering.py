@@ -69,7 +69,7 @@ def render_lines_png(
     bbox: BBox,
     img_w: int,
     img_h: int,
-    line_w_m: float = 6.0,
+    line_w_m: float = 8.0,
     roads: Optional[List[List[Tuple[float, float]]]] = None,
     opaque_bg: bool = False
 ) -> bytes:
