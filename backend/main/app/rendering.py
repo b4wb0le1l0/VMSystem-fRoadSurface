@@ -1,4 +1,4 @@
-from typing import Tuple, List, Optional
+from typing import Tuple, List, Optional, Literal
 from PIL import Image, ImageDraw
 import numpy as np
 import math
