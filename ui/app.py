@@ -50,12 +50,16 @@ def settings_kb(current_period: str, current_radius: int) -> InlineKeyboardMarku
     return InlineKeyboardMarkup(inline_keyboard=[row1, row2, row3])
 
 def heatmap_url_global(period: str, metric="p95", w=1200, h=800) -> str:
-    return f"{BACKEND_URL}/heatmap_global?period={quote(period)}&metric={metric}&img_w={w}&img_h={h}"
+    return (
+        f"{BACKEND_URL}/heatmap_global?period={quote(period)}"
+        f"&metric={metric}&img_w={w}&img_h={h}&overlay_roads=true"
+    )
 
 def heatmap_url_global_lines(period: str, w=1200, h=800, line_w_m=10) -> str:
     return (
         f"{BACKEND_URL}/heatmap_global_lines"
-        f"?period={quote(period)}&img_w={w}&img_h={h}&line_w_m={line_w_m}"
+        f"?period={quote(period)}&img_w={w}&img_h={h}"
+        f"&line_w_m={line_w_m}&overlay_roads=true"
     )
 
 def heatmap_url_bbox(min_lat, min_lon, max_lat, max_lon, period, metric="p95", w=1000, h=800) -> str:
@@ -63,13 +67,19 @@ def heatmap_url_bbox(min_lat, min_lon, max_lat, max_lon, period, metric="p95", w
             f"&max_lat={max_lat}&max_lon={max_lon}&period={quote(period)}&metric={metric}&img_w={w}&img_h={h}")
 
 def heatmap_url_loc(lat: float, lon: float, radius_m: int, period: str, metric="p95", w=800, h=800) -> str:
-    return (f"{BACKEND_URL}/heatmap?lat={lat:.6f}&lon={lon:.6f}"
-            f"&radius_m={radius_m}&period={quote(period)}&metric={metric}&img_w={w}&img_h={h}")
+    return (
+        f"{BACKEND_URL}/heatmap?lat={lat:.6f}&lon={lon:.6f}"
+        f"&radius_m={radius_m}&period={quote(period)}"
+        f"&metric={metric}&img_w={w}&img_h={h}&overlay_roads=true"
+    )
 
 def heatmap_url_loc_lines(lat: float, lon: float, radius_m: int, period: str, w=800, h=800, line_w_m=10) -> str:
     return (
-        f"{BACKEND_URL}/heatmap_lines?lat={lat:.6f}&lon={lon:.6f}"
-        f"&radius_m={radius_m}&period={quote(period)}&img_w={w}&img_h={h}&line_w_m={line_w_m}"
+        f"{BACKEND_URL}/heatmap_lines"
+        f"?lat={lat:.6f}&lon={lon:.6f}"
+        f"&radius_m={radius_m}&period={quote(period)}"
+        f"&img_w={w}&img_h={h}&line_w_m={line_w_m}"
+        f"&overlay_roads=true"
     )
 
 async def send_png(chat_id: int, url: str, caption: str):
