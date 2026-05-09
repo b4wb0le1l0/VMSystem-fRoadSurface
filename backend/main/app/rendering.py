@@ -11,11 +11,11 @@ def color_for_score(score: Optional[float]) -> RGBA:
     if score is None or (isinstance(score, float) and np.isnan(score)):
         return (200, 200, 200, 0)
 
-    if score < 1.00:
+    if score < 1.15:
         return (0, 180, 0, 200)      # green
-    if score < 1.50:
+    if score < 1.75:
         return (210, 190, 0, 210)    # yellow
-    if score < 2.20:
+    if score < 2.50:
         return (240, 140, 0, 220)    # orange
     return (220, 0, 0, 230)          # red
 
@@ -157,8 +157,8 @@ def render_lines_png(
 
 def legend_items() -> List[dict]:
     return [
-        {"label": "Green (good)", "max": 1.00, "color_rgba": [0, 180, 0, 160]},
-        {"label": "Yellow",       "max": 1.50, "color_rgba": [210, 190, 0, 170]},
-        {"label": "Orange",       "max": 2.20, "color_rgba": [240, 140, 0, 190]},
+        {"label": "Green (good)", "max": 1.15, "color_rgba": [0, 180, 0, 160]},
+        {"label": "Yellow",       "max": 1.75, "color_rgba": [210, 190, 0, 170]},
+        {"label": "Orange",       "max": 2.50, "color_rgba": [240, 140, 0, 190]},
         {"label": "Red (bad)",    "max": None, "color_rgba": [220, 0, 0, 200]},
     ]
