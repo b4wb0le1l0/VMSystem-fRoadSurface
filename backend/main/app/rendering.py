@@ -94,8 +94,17 @@ def render_lines_png(
         if len(line) < 2:
             continue
 
-        for (la1, lo1, s1), (la2, lo2, s2) in zip(line[:-1], line[1:]):
-            steps = 6  # 4-8 обычно достаточно
+        smoothed = []
+        for idx, (lat, lon, s) in enumerate(line):
+            s_prev = line[idx - 1][2] if idx > 0 else s
+            s_next = line[idx + 1][2] if idx < len(line) - 1 else s
+
+            # мягкое сглаживание: соседние точки влияют, но центр важнее
+            s_smooth = 0.25 * s_prev + 0.50 * s + 0.25 * s_next
+            smoothed.append((lat, lon, s_smooth))
+
+        for (la1, lo1, s1), (la2, lo2, s2) in zip(smoothed[:-1], smoothed[1:]):
+            steps = 6
 
             for i in range(steps):
                 t0 = i / steps
