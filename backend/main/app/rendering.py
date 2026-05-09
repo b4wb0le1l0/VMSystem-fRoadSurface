@@ -10,14 +10,13 @@ BBox = Tuple[float, float, float, float]
 def color_for_score(score: Optional[float]) -> RGBA:
     if score is None or (isinstance(score, float) and np.isnan(score)):
         return (200, 200, 200, 0)
-
-    if score < 0.08:
-        return (0, 180, 0, 200)       # green
-    if score < 0.20:
-        return (220, 210, 0, 210)     # yellow
-    if score < 0.45:
-        return (240, 140, 0, 220)     # orange
-    return (220, 0, 0, 230)           # red
+    if score < 0.35:
+        return (0, 180, 0, 200)      # green
+    if score < 0.90:
+        return (210, 190, 0, 210)    # yellow
+    if score < 1.80:
+        return (240, 140, 0, 220)    # orange
+    return (220, 0, 0, 230)          # red
 
 def _to_px_builder(bbox: BBox, img_w: int, img_h: int):
     min_lat, min_lon, max_lat, max_lon = bbox
@@ -93,9 +92,26 @@ def render_lines_png(
     for line in lines:
         if len(line) < 2:
             continue
+
         for (la1, lo1, s1), (la2, lo2, s2) in zip(line[:-1], line[1:]):
-            draw.line([to_px(la1, lo1), to_px(la2, lo2)],
-                      fill=color_for_score((s1 + s2) / 2.0), width=w_px)
+            steps = 6  # 4-8 обычно достаточно
+
+            for i in range(steps):
+                t0 = i / steps
+                t1 = (i + 1) / steps
+
+                lat_a = la1 + (la2 - la1) * t0
+                lon_a = lo1 + (lo2 - lo1) * t0
+                lat_b = la1 + (la2 - la1) * t1
+                lon_b = lo1 + (lo2 - lo1) * t1
+
+                s_mid = s1 + (s2 - s1) * ((t0 + t1) * 0.5)
+
+                draw.line(
+                    [to_px(lat_a, lon_a), to_px(lat_b, lon_b)],
+                    fill=color_for_score(s_mid),
+                    width=w_px
+                )
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -103,8 +119,8 @@ def render_lines_png(
 
 def legend_items() -> List[dict]:
     return [
-        {"label": "A (smooth)", "max": 0.08, "color_rgba": [0, 180, 0, 160]},
-        {"label": "B (minor irregularities)", "max": 0.20, "color_rgba": [220, 210, 0, 170]},
-        {"label": "C (noticeable roughness)", "max": 0.45, "color_rgba": [240, 140, 0, 190]},
-        {"label": "D (severe bumps)", "max": None, "color_rgba": [220, 0, 0, 200]},
+        {"label": "Green (good)", "max": 0.35, "color_rgba": [0, 180, 0, 160]},
+        {"label": "Yellow",       "max": 0.90, "color_rgba": [210, 190, 0, 170]},
+        {"label": "Orange",       "max": 1.80, "color_rgba": [240, 140, 0, 190]},
+        {"label": "Red (bad)",    "max": None, "color_rgba": [220, 0, 0, 200]},
     ]

@@ -12,26 +12,18 @@ from .utils import bbox_from_center, cell_deg_size
 from .rendering import render_points_png, render_lines_png, legend_items
 
 ENGINE_BASELINE = {
-    "a_rms":   0.592,
-    "a_p95":   1.148,
-    "jerk_p95": 35.742
+    "a_rms": 0.18,
+    "a_p95": 0.35,
+    "a_max": 0.55,
+    "jerk_p95": 8.0,
 }
 
-MIN_THRESHOLDS = {
-    "a_rms":   1.184,
-    "a_p95":   2.295,
-    "a_max":   2.588,
-    "jerk_p95": 71.484
-}
+def _nz(v: float, base: float) -> float:
+    return max(0.0, v - base)
 
 router = APIRouter()
 
 def compute_score_py(w: dict) -> float:
-    """
-    Вычисляет показатель неровности дороги.
-    Учитывает базовые шумы двигателя (вычитает ENGINE_BASELINE).
-    Если значения ниже MIN_THRESHOLDS — возвращает 0 (шум двигателя).
-    """
     a_rms = float(w.get("a_rms") or 0.0)
     a_p95 = float(w.get("a_p95") or 0.0)
     a_max = float(w.get("a_max") or 0.0)
@@ -39,29 +31,23 @@ def compute_score_py(w: dict) -> float:
     peaks = int(w.get("peaks") or 0)
     speed_mps = float(w.get("speed_mps") or 0.0)
 
-    a_rms_adj = max(0.0, a_rms - ENGINE_BASELINE["a_rms"])
-    a_p95_adj = max(0.0, a_p95 - ENGINE_BASELINE["a_p95"])
-    jerk_p95_adj = max(0.0, jerk_p95 - ENGINE_BASELINE["jerk_p95"])
-    a_max_adj = max(0.0, a_max - MIN_THRESHOLDS["a_max"])
-
-    if (a_rms_adj < MIN_THRESHOLDS["a_rms"] and
-        a_p95_adj < MIN_THRESHOLDS["a_p95"] and
-        jerk_p95_adj < MIN_THRESHOLDS["jerk_p95"]):
-        return 0.0
-
-    peak_factor = min(peaks, 12) * 0.02
+    # вычитаем мягкий baseline
+    a_rms_eff = _nz(a_rms, ENGINE_BASELINE["a_rms"])
+    a_p95_eff = _nz(a_p95, ENGINE_BASELINE["a_p95"])
+    a_max_eff = _nz(a_max, ENGINE_BASELINE["a_max"])
+    jerk_eff = _nz(jerk_p95, ENGINE_BASELINE["jerk_p95"])
 
     score = (
-        0.45 * a_rms_adj +
-        0.30 * a_p95_adj +
-        0.15 * a_max_adj +
-        0.10 * jerk_p95_adj +
-        peak_factor
+        0.35 * a_rms_eff +
+        0.30 * a_p95_eff +
+        0.20 * a_max_eff +
+        0.10 * (jerk_eff / 10.0) +
+        0.05 * min(peaks, 10)
     )
 
-    if speed_mps > 0.5:
-        speed_factor = max(0.85, min(1.15, speed_mps / 5.0))
-        score = score / speed_factor
+    # лёгкая нормализация по скорости
+    if speed_mps > 1.0:
+        score = score / max(0.85, min(1.15, speed_mps / 8.0))
 
     return float(score)
 
