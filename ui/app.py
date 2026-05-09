@@ -35,7 +35,7 @@ def get_user_prefs(uid: int) -> Dict:
 
 def make_main_kb() -> ReplyKeyboardMarkup:
     kb = [
-        [KeyboardButton(text="🗺 Общая карта")],
+        [KeyboardButton(text="🗺 Общая карта"), KeyboardButton(text="🛣 Общая карта (линии)")],
         [KeyboardButton(text="🏙 По городу"), KeyboardButton(text="📍 По локации", request_location=True)],
         [KeyboardButton(text="⚙️ Настройки")]
     ]
@@ -52,6 +52,12 @@ def settings_kb(current_period: str, current_radius: int) -> InlineKeyboardMarku
 def heatmap_url_global(period: str, metric="p95", w=1200, h=800) -> str:
     return f"{BACKEND_URL}/heatmap_global?period={quote(period)}&metric={metric}&img_w={w}&img_h={h}"
 
+def heatmap_url_global_lines(period: str, w=1200, h=800, line_w_m=10) -> str:
+    return (
+        f"{BACKEND_URL}/heatmap_global_lines"
+        f"?period={quote(period)}&img_w={w}&img_h={h}&line_w_m={line_w_m}"
+    )
+
 def heatmap_url_bbox(min_lat, min_lon, max_lat, max_lon, period, metric="p95", w=1000, h=800) -> str:
     return (f"{BACKEND_URL}/heatmap_bbox?min_lat={min_lat}&min_lon={min_lon}"
             f"&max_lat={max_lat}&max_lon={max_lon}&period={quote(period)}&metric={metric}&img_w={w}&img_h={h}")
@@ -59,6 +65,12 @@ def heatmap_url_bbox(min_lat, min_lon, max_lat, max_lon, period, metric="p95", w
 def heatmap_url_loc(lat: float, lon: float, radius_m: int, period: str, metric="p95", w=800, h=800) -> str:
     return (f"{BACKEND_URL}/heatmap?lat={lat:.6f}&lon={lon:.6f}"
             f"&radius_m={radius_m}&period={quote(period)}&metric={metric}&img_w={w}&img_h={h}")
+
+def heatmap_url_loc_lines(lat: float, lon: float, radius_m: int, period: str, w=800, h=800, line_w_m=10) -> str:
+    return (
+        f"{BACKEND_URL}/heatmap_lines?lat={lat:.6f}&lon={lon:.6f}"
+        f"&radius_m={radius_m}&period={quote(period)}&img_w={w}&img_h={h}&line_w_m={line_w_m}"
+    )
 
 async def send_png(chat_id: int, url: str, caption: str):
     """
@@ -95,9 +107,10 @@ async def cmd_start(msg: Message):
     text = (
         "Привет! Я бот вибромониторинга дорожного покрытия.\n\n"
         "Выберите режим:\n"
-        "• 🗺 Общая карта — по всем собранным данным\n"
-        "• 🏙 По городу — введёте название, я найду границы\n"
-        "• 📍 По локации — пришлите местоположение\n\n"
+        "• 🗺 Общая карта — точечная тепловая карта\n"
+        "• 🛣 Общая карта (линии) — маршрут линиями\n"
+        "• 🏙 По городу — карта по границам города\n"
+        "• 📍 По локации — карта вокруг вашей точки\n\n"
         "Период и радиус можно настроить в ⚙️ Настройки."
     )
     await msg.answer(text, reply_markup=make_main_kb())
@@ -134,11 +147,11 @@ async def set_radius(cb: CallbackQuery):
 async def show_legend(cb: CallbackQuery):
     text = (
         "Легенда:\n"
-        "• Зеленый — дорога ок (≈90–100%)\n"
-        "• Желтый — умеренные неровности (≈70–90%)\n"
-        "• Оранжевый — заметные неровности (≈50–70%)\n"
-        "• Красный — плохая дорога (≈0–50%)\n\n"
-        "Примечание: проценты — условная наглядная шкала, а не точный стандарт."
+        "• Зеленый — ровное покрытие\n"
+        "• Желтый — слабые неровности\n"
+        "• Оранжевый — заметные неровности\n"
+        "• Красный — сильные дефекты / кочки / ямы\n\n"
+        "Линии и точки строятся по рассчитанному roughness score."
     )
     await cb.message.answer(text)
     await cb.answer()
@@ -148,6 +161,12 @@ async def common_map(msg: Message):
     prefs = get_user_prefs(msg.from_user.id)
     url = heatmap_url_global(prefs["period"])
     await send_png(msg.chat.id, url, f"Общая карта. Период: {prefs['period']}")
+
+@dp.message(F.text == "🛣 Общая карта (линии)")
+async def common_map_lines(msg: Message):
+    prefs = get_user_prefs(msg.from_user.id)
+    url = heatmap_url_global_lines(prefs["period"])
+    await send_png(msg.chat.id, url, f"Общая карта (линии). Период: {prefs['period']}")
 
 @dp.message(F.text == "🏙 По городу")
 async def ask_city(msg: Message):
@@ -197,7 +216,7 @@ async def on_location(msg: Message):
     lon = msg.location.longitude
     prefs["last_loc"] = (lat, lon)
     await msg.answer("Получил локацию. Строю карту…")
-    url = heatmap_url_loc(lat, lon, prefs["radius"], prefs["period"])
+    url = heatmap_url_loc_lines(lat, lon, prefs["radius"], prefs["period"])
     await send_png(msg.chat.id, url, f"Период: {prefs['period']}, радиус: {prefs['radius']} м")
 
 async def main():
