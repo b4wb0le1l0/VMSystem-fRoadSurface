@@ -38,16 +38,16 @@ def compute_score_py(w: dict) -> float:
     jerk_eff = _nz(jerk_p95, ENGINE_BASELINE["jerk_p95"])
 
     score = (
-        0.35 * a_rms_eff +
-        0.30 * a_p95_eff +
-        0.20 * a_max_eff +
-        0.10 * (jerk_eff / 10.0) +
+        0.40 * a_rms_eff +
+        0.32 * a_p95_eff +
+        0.18 * a_max_eff +
+        0.05 * (jerk_eff / 10.0) +
         0.05 * min(peaks, 10)
     )
 
-    # лёгкая нормализация по скорости
-    if speed_mps > 1.0:
-        score = score / max(0.85, min(1.15, speed_mps / 8.0))
+    if speed_mps > 2.0:
+        speed_factor = max(1.0, min(1.5, 0.9 + speed_mps / 12.0))
+        score = score / speed_factor
 
     return float(score)
 
