@@ -17,7 +17,7 @@ from aiogram.types import (
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 BACKEND_URL = os.environ.get("BACKEND_URL", "http://app:8000").rstrip("/")
-DEFAULT_PERIOD = os.environ.get("DEFAULT_PERIOD", "30 days")
+DEFAULT_PERIOD = os.environ.get("DEFAULT_PERIOD", "30 дней")
 DEFAULT_RADIUS = int(os.environ.get("DEFAULT_RADIUS", "1000"))
 
 if not BOT_TOKEN:
@@ -42,7 +42,7 @@ def make_main_kb() -> ReplyKeyboardMarkup:
     return ReplyKeyboardMarkup(keyboard=kb, resize_keyboard=True)
 
 def settings_kb(current_period: str, current_radius: int) -> InlineKeyboardMarkup:
-    periods = ["7 days", "14 days", "30 days", "90 days"]
+    periods = ["7 дней", "14 дней", "30 дней", "90 дней"]
     radii = [500, 1000, 2000, 3000]
     row1 = [InlineKeyboardButton(text=("✅ " if p == current_period else "") + p, callback_data=f"set_period:{p}") for p in periods]
     row2 = [InlineKeyboardButton(text=("✅ " if r == current_radius else "") + f"{r} м", callback_data=f"set_radius:{r}") for r in radii]

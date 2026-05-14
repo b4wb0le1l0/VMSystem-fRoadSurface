@@ -14,11 +14,11 @@
 #define REG_ACCEL_XOUT_H 0x3B
 
 // ===================== Wi-Fi =====================
-const char* WIFI_SSID = "ESP_TEST";
-const char* WIFI_PASS = "55555444";
+const char* WIFI_SSID = "Galaxy";
+const char* WIFI_PASS = "rulx1017";
 
 // ===================== Backend =====================
-const char* SERVER_URL = "http://222.167.211.89:8000/ingest/windows";
+const char* SERVER_URL = "http://222.167.211.89/ingest/windows";
 const char* DEVICE_SERIAL = "car_01";
 
 // ===================== GPS =====================
