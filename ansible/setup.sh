@@ -22,6 +22,10 @@ bootstrap() {
   ansible-playbook -i "$INVENTORY" "$ANSIBLE_DIR/playbooks/bootstrap.yml"
 }
 
+nginx() {
+  ansible-playbook -i "$INVENTORY" "$ANSIBLE_DIR/playbooks/deploy_nginx.yml"
+}
+
 postgres() {
   ansible-playbook -i "$INVENTORY" "$ANSIBLE_DIR/playbooks/deploy_postgres.yml"
 }
@@ -40,6 +44,7 @@ wipe() {
 
 all_deploy() {
   bootstrap &&
+  nginx &&
   postgres &&
   backend &&
   bot
@@ -67,4 +72,4 @@ tlogs() {
 
 echo "Environment loaded."
 echo "Directory: $ANSIBLE_DIR"
-echo "Commands: ping, bootstrap, postgres, backend, bot, wipe, all_deploy, status, blogs, plogs, tlogs"
+echo "Commands: ping, bootstrap, nginx, postgres, backend, bot, wipe, all_deploy, status, blogs, plogs, tlogs"

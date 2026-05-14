@@ -1,0 +1,30 @@
+---
+- name: Deploy nginx config and restart stack
+  hosts: vibro
+  become: true
+  vars:
+    project_root: /opt/vibro
+
+  tasks:
+    - name: Ensure nginx config directory exists
+      file:
+        path: "{{ project_root }}/docker/nginx"
+        state: directory
+        mode: "0755"
+
+    - name: Upload nginx main config
+      copy:
+        src: ../../docker/nginx/default.conf
+        dest: "{{ project_root }}/docker/nginx/default.conf"
+        mode: "0644"
+
+    - name: Upload nginx proxy params
+      copy:
+        src: ../../docker/nginx/proxy_params_local
+        dest: "{{ project_root }}/docker/nginx/proxy_params_local"
+        mode: "0644"
+
+    - name: Recreate nginx service
+      shell: docker compose up -d --force-recreate nginx
+      args:
+        chdir: "{{ project_root }}"
